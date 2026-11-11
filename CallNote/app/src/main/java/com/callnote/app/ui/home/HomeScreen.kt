@@ -1,5 +1,8 @@
 package com.callnote.app.ui.home
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,8 +67,23 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val importing by viewModel.importing.collectAsStateWithLifecycle()
+    val importMessage by viewModel.importMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) viewModel.importUris(uris)
+    }
+
+    LaunchedEffect(importMessage) {
+        importMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeImportMessage()
+        }
+    }
 
     fun showComingSoon(feature: String, phase: String) {
         scope.launch {
@@ -113,7 +132,8 @@ fun HomeScreen(
                 item { StatsCard(uiState.stats) }
                 item {
                     QuickActions(
-                        onImport = { showComingSoon("导入录音", "第二阶段") },
+                        importing = importing,
+                        onImport = { importLauncher.launch(arrayOf("audio/*")) },
                         onTranscribe = { showComingSoon("批量转写", "第四阶段") },
                         onClassify = onNavigateToCategories,
                         onClean = { showComingSoon("批量清理", "第六阶段") }
@@ -228,6 +248,7 @@ private fun StatItem(
 
 @Composable
 private fun QuickActions(
+    importing: Boolean,
     onImport: () -> Unit,
     onTranscribe: () -> Unit,
     onClassify: () -> Unit,
@@ -246,7 +267,8 @@ private fun QuickActions(
             QuickActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Outlined.FileUpload,
-                label = "导入录音",
+                label = if (importing) "导入中…" else "导入录音",
+                loading = importing,
                 onClick = onImport
             )
             QuickActionButton(
@@ -282,21 +304,31 @@ private fun QuickActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     label: String,
+    loading: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = modifier.height(76.dp),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        onClick = onClick
+        color = if (loading) MaterialTheme.colorScheme.surfaceVariant
+        else MaterialTheme.colorScheme.primaryContainer,
+        contentColor = if (loading) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onPrimaryContainer,
+        onClick = { if (!loading) onClick() }
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(imageVector = icon, contentDescription = label)
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(imageVector = icon, contentDescription = label)
+            }
             Spacer(Modifier.height(6.dp))
             Text(text = label, style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }
