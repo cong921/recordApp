@@ -1,6 +1,7 @@
 package com.callnote.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -86,6 +87,7 @@ fun StatusBadge(statusName: String, modifier: Modifier = Modifier) {
 fun RecordListItem(
     item: RecordWithCategory,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
     val record = item.record
@@ -97,6 +99,7 @@ fun RecordListItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

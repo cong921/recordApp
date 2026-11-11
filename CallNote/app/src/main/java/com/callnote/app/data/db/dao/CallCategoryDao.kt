@@ -1,6 +1,7 @@
 package com.callnote.app.data.db.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -23,6 +24,16 @@ interface CallCategoryDao {
     @Query("SELECT * FROM call_category ORDER BY sort ASC")
     fun observeAll(): Flow<List<CallCategoryEntity>>
 
+    @Query("SELECT * FROM call_category ORDER BY sort ASC")
+    suspend fun getAll(): List<CallCategoryEntity>
+
+    @Delete
+    suspend fun delete(category: CallCategoryEntity)
+
+    /** 按主键删除非系统分类；返回影响行数（0 表示系统分类被拒绝） */
+    @Query("DELETE FROM call_category WHERE id = :id AND isSystem = 0")
+    suspend fun deleteById(id: Long): Int
+
     @Query("SELECT * FROM call_category WHERE id = :id")
     suspend fun getById(id: Long): CallCategoryEntity?
 
@@ -40,6 +51,7 @@ interface CallCategoryDao {
         SELECT c.id AS id,
                c.categoryName AS categoryName,
                c.categoryCode AS categoryCode,
+               c.isSystem AS isSystem,
                COUNT(r.id) AS recordCount,
                COALESCE(SUM(r.fileSize), 0) AS totalSize,
                COALESCE(SUM(r.duration), 0) AS totalDuration,

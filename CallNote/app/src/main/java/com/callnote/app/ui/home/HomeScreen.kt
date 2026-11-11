@@ -38,14 +38,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -58,7 +59,6 @@ import com.callnote.app.data.db.pojo.RecordStats
 import com.callnote.app.ui.components.RecordListItem
 import com.callnote.app.ui.components.StatusBadge
 import com.callnote.app.util.Format
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,9 +69,10 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
     val classifying by viewModel.classifying.collectAsStateWithLifecycle()
+    val cleaning by viewModel.cleaning.collectAsStateWithLifecycle()
+    val cleanPreview by viewModel.cleanPreview.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -86,10 +87,28 @@ fun HomeScreen(
         }
     }
 
-    fun showComingSoon(feature: String, phase: String) {
-        scope.launch {
-            snackbarHostState.showSnackbar("${feature}将在${phase}开放")
-        }
+    // 批量清理确认对话框
+    cleanPreview?.let { preview ->
+        AlertDialog(
+            onDismissRequest = viewModel::cancelClean,
+            title = { Text("批量清理") },
+            text = {
+                Text(
+                    "将删除 ${preview.count} 条已转写录音的音频文件，" +
+                        "预计释放 ${Format.fileSize(preview.sizeBytes)}。\n\n" +
+                        "转写文本、摘要与分类会完整保留。"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::executeClean,
+                    enabled = !cleaning
+                ) { Text(if (cleaning) "清理中…" else "清理") }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelClean) { Text("取消") }
+            }
+        )
     }
 
     Scaffold(
@@ -134,10 +153,11 @@ fun HomeScreen(
                 item {
                     QuickActions(
                         importing = importing,
+                        classifying = classifying,
                         onImport = { importLauncher.launch(arrayOf("audio/*")) },
                         onTranscribe = viewModel::startBatchTranscription,
                         onClassify = viewModel::startBatchClassification,
-                        onClean = { showComingSoon("批量清理", "第六阶段") }
+                        onClean = viewModel::prepareClean
                     )
                 }
                 item {
@@ -250,6 +270,7 @@ private fun StatItem(
 @Composable
 private fun QuickActions(
     importing: Boolean,
+    classifying: Boolean,
     onImport: () -> Unit,
     onTranscribe: () -> Unit,
     onClassify: () -> Unit,
@@ -286,7 +307,8 @@ private fun QuickActions(
             QuickActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Outlined.AutoAwesome,
-                label = "智能分类",
+                label = if (classifying) "分类中…" else "智能分类",
+                loading = classifying,
                 onClick = onClassify
             )
             QuickActionButton(

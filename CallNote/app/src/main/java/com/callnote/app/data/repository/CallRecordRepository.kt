@@ -40,6 +40,9 @@ class CallRecordRepository @Inject constructor(
     /** 已转写但未分类的记录（第五阶段智能分类入口） */
     suspend fun getUnclassifiedCompleted(): List<CallRecordEntity> = dao.getUnclassifiedCompleted()
 
+    /** 已转写且音频文件仍在的记录（第六阶段批量清理入口） */
+    suspend fun getCleanableCompleted(): List<CallRecordEntity> = dao.getCleanableCompleted()
+
     suspend fun updateRecordStatus(recordId: Long, status: TranscriptionStatus) =
         dao.updateStatus(recordId, status.name, System.currentTimeMillis())
 
@@ -78,6 +81,28 @@ class CallRecordRepository @Inject constructor(
     /** 补齐摘要与关键词 */
     suspend fun updateSummaryAndKeywords(recordId: Long, summary: String, keywords: String) =
         dao.updateSummaryAndKeywords(recordId, summary, keywords, System.currentTimeMillis())
+
+    /**
+     * 批量清理：删除已转写录音的本地音频文件（转写文本保留）。
+     * @return (清理条数, 释放字节数)
+     */
+    suspend fun cleanTranscribedAudio(): Pair<Int, Long> {
+        val records = dao.getCleanableCompleted()
+        var freedBytes = 0L
+        var cleaned = 0
+        for (record in records) {
+            val path = record.localPath ?: continue
+            val file = java.io.File(path)
+            val size = if (file.exists()) file.length() else 0L
+            val deleted = !file.exists() || file.delete()
+            if (deleted) {
+                freedBytes += size
+                dao.markAudioDeleted(record.id, "", System.currentTimeMillis())
+                cleaned++
+            }
+        }
+        return cleaned to freedBytes
+    }
 
     companion object {
         const val ALL = -1L

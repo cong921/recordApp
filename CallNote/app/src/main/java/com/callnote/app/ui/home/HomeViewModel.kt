@@ -63,6 +63,12 @@ class HomeViewModel @Inject constructor(
     private val _classifying = MutableStateFlow(false)
     val classifying: StateFlow<Boolean> = _classifying.asStateFlow()
 
+    private val _cleaning = MutableStateFlow(false)
+    val cleaning: StateFlow<Boolean> = _cleaning.asStateFlow()
+
+    private val _cleanPreview = MutableStateFlow<CleanPreview?>(null)
+    val cleanPreview: StateFlow<CleanPreview?> = _cleanPreview.asStateFlow()
+
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
@@ -140,8 +146,52 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 批量清理预览：统计可清理的已转写音频（供确认对话框展示）。
+     */
+    fun prepareClean() {
+        viewModelScope.launch {
+            val records = recordRepository.getCleanableCompleted()
+            if (records.isEmpty()) {
+                _message.value = "没有可清理的音频（需先完成转写）"
+            } else {
+                _cleanPreview.value = CleanPreview(
+                    count = records.size,
+                    sizeBytes = records.sumOf { it.fileSize }
+                )
+            }
+        }
+    }
+
+    fun cancelClean() {
+        _cleanPreview.value = null
+    }
+
+    /** 确认后执行清理：删除音频文件，保留转写文本 */
+    fun executeClean() {
+        viewModelScope.launch {
+            _cleaning.value = true
+            try {
+                val (count, freed) = recordRepository.cleanTranscribedAudio()
+                _cleanPreview.value = null
+                _message.value = "已清理 $count 条录音音频，释放 ${formatSize(freed)}"
+            } finally {
+                _cleaning.value = false
+            }
+        }
+    }
+
+    private fun formatSize(bytes: Long): String =
+        android.text.format.Formatter.formatShortFileSize(context, bytes)
+
     /** Snackbar 展示完毕后清除消息 */
     fun consumeMessage() {
         _message.value = null
     }
 }
+
+/** 批量清理确认对话框数据 */
+data class CleanPreview(
+    val count: Int,
+    val sizeBytes: Long
+)

@@ -15,6 +15,7 @@ data class CategoryStats(
     val id: Long,
     val categoryName: String,
     val categoryCode: String,
+    val isSystem: Boolean,
     val recordCount: Int,
     val totalSize: Long,
     val totalDuration: Long,

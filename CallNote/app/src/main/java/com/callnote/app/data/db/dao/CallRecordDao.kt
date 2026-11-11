@@ -41,6 +41,15 @@ interface CallRecordDao {
     )
     suspend fun getUnclassifiedCompleted(): List<CallRecordEntity>
 
+    @Query(
+        """
+        SELECT * FROM call_record
+        WHERE transcriptionStatus = 'COMPLETED' AND localPath IS NOT NULL
+        ORDER BY callTime ASC
+        """
+    )
+    suspend fun getCleanableCompleted(): List<CallRecordEntity>
+
     @Query("UPDATE call_record SET transcriptionStatus = :status, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String, updatedAt: Long)
 
