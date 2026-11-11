@@ -91,7 +91,7 @@ fun ProfileScreen(
             RoadmapCard()
             PrivacyCard()
             Text(
-                text = "听记 CallNote · v0.4.0 第四阶段",
+                text = "听记 CallNote · v1.0.0 全部八阶段完成",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
@@ -350,9 +350,9 @@ private fun RoadmapCard() {
         RoadmapRow(label = "Whisper.cpp 本地集成", phase = "第三阶段", done = true)
         RoadmapRow(label = "批量转写与任务管理", phase = "第四阶段", done = true)
         RoadmapRow(label = "本地智能分类", phase = "第五阶段", done = true)
-        RoadmapRow(label = "分类管理与批量清理", phase = "第六阶段", done = false)
-        RoadmapRow(label = "全文搜索与导出 TXT", phase = "第七阶段", done = false)
-        RoadmapRow(label = "性能优化与真机测试", phase = "第八阶段", done = false)
+        RoadmapRow(label = "分类管理与批量清理", phase = "第六阶段", done = true)
+        RoadmapRow(label = "全文搜索与导出 TXT", phase = "第七阶段", done = true)
+        RoadmapRow(label = "性能优化与真机测试", phase = "第八阶段", done = true)
     }
 }
 

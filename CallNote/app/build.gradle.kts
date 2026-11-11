@@ -16,12 +16,12 @@ android {
         applicationId = "com.callnote.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 8
+        versionName = "1.0.0"
 
         ndk {
-            // 先只编 64 位 ARM（真机）；模拟器 x86_64 以后按需放开
-            abiFilters += listOf("arm64-v8a")
+            // arm64 真机 + x86_64 模拟器
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
 
         externalNativeBuild {
@@ -40,8 +40,9 @@ android {
 
     buildTypes {
         release {
-            // 第一阶段不启用混淆，第八阶段（性能优化）再开启
-            isMinifyEnabled = false
+            // 第八阶段开启 R8 混淆 + 资源收缩，配套 keep 规则见 proguard-rules.pro
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
