@@ -137,8 +137,30 @@ class WhisperModelManager @Inject constructor(
         val dir = modelsDir()
         val dest = File(dir, model.fileName)
         val part = File(dir, model.fileName + PART_SUFFIX)
+        var lastError: Exception? = null
 
-        val connection = URL(model.downloadUrl).openConnection() as HttpURLConnection
+        // 逐个尝试下载源（国内镜像 → 官方），中途失败自动切换续传
+        for (url in model.downloadUrls) {
+            try {
+                downloadFrom(url, model, part)
+                // 完整性校验：大小达到期望值的绝大部分才视为有效
+                if (part.length() < model.sizeBytes * MIN_SIZE_RATIO) {
+                    throw IOException("文件大小校验失败（预期约 ${model.sizeBytes}，实际 ${part.length()}）")
+                }
+                if (dest.exists()) dest.delete()
+                if (!part.renameTo(dest)) throw IOException("无法保存模型文件")
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+        throw lastError ?: IOException("下载失败")
+    }
+
+    private suspend fun downloadFrom(url: String, model: WhisperModel, part: File) {
+        val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_TIMEOUT
         connection.readTimeout = READ_TIMEOUT
         val resumeFrom = if (part.exists()) part.length() else 0L
@@ -170,19 +192,14 @@ class WhisperModelManager @Inject constructor(
                         ) {
                             lastReport = received
                             downloadStates.update {
-                                it + (model.id to DownloadState.Downloading(received, total))
+                                it + (model.id to
+                                    DownloadState.Downloading(received, total))
                             }
                         }
                     }
                     output.flush()
                 }
             }
-            // 完整性校验：大小达到期望值的绝大部分才视为有效
-            if (part.length() < model.sizeBytes * MIN_SIZE_RATIO) {
-                throw IOException("文件大小校验失败（预期约 ${model.sizeBytes}，实际 ${part.length()}）")
-            }
-            if (dest.exists()) dest.delete()
-            if (!part.renameTo(dest)) throw IOException("无法保存模型文件")
         } finally {
             connection.disconnect()
         }

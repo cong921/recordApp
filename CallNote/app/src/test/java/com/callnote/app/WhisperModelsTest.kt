@@ -21,10 +21,22 @@ class WhisperModelsTest {
     }
 
     @Test
-    fun `下载地址指向 whisper cpp 官方仓库`() {
+    fun `下载地址含国内镜像与官方源`() {
         WhisperModel.entries.forEach {
-            assertTrue(it.downloadUrl.startsWith("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"))
-            assertTrue(it.downloadUrl.endsWith(it.fileName))
+            assertEquals(2, it.downloadUrls.size)
+            assertTrue(
+                it.downloadUrls[0].startsWith(
+                    "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/"
+                )
+            )
+            assertTrue(
+                it.downloadUrls[1].startsWith(
+                    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/"
+                )
+            )
+            it.downloadUrls.forEach { url ->
+                assertTrue(url.endsWith(it.fileName))
+            }
         }
     }
 

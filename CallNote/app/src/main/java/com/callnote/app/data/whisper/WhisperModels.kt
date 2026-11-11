@@ -33,11 +33,14 @@ enum class WhisperModel(
         description = "约 466MB，准确率最高，速度较慢、占用更大"
     );
 
-    val downloadUrl: String get() = "$DOWNLOAD_BASE/$fileName"
+    /** 下载源列表：国内镜像优先，HuggingFace 官方兜底（逐个尝试） */
+    val downloadUrls: List<String> get() = DOWNLOAD_BASES.map { "$it/$fileName" }
 
     companion object {
-        private const val DOWNLOAD_BASE =
+        private val DOWNLOAD_BASES = listOf(
+            "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main",
             "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
+        )
 
         fun fromId(id: String?): WhisperModel? =
             if (id.isNullOrBlank()) null else entries.find { it.id == id }
