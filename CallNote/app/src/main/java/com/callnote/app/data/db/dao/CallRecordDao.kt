@@ -125,4 +125,11 @@ interface CallRecordDao {
 
     @Query("UPDATE call_record SET localPath = NULL, fileUri = :placeholderUri, fileSize = 0, updatedAt = :updatedAt WHERE id = :id")
     suspend fun markAudioDeleted(id: Long, placeholderUri: String, updatedAt: Long)
+
+    /**
+     * 清除预置演示数据。判定条件不会误伤真实数据：
+     * 真实导入 localPath 非空；批量清理后的真实记录 fileUri 为空串。
+     */
+    @Query("DELETE FROM call_record WHERE localPath IS NULL AND fileUri != ''")
+    suspend fun deleteDemoRecords(): Int
 }

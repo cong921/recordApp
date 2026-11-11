@@ -15,8 +15,12 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** 批量导入结果：成功条数与失败文件名列表 */
-data class ImportResult(val successCount: Int, val failedFiles: List<String>)
+/** 批量导入结果：成功条数、失败文件名列表、顺带清除的演示数据条数 */
+data class ImportResult(
+    val successCount: Int,
+    val failedFiles: List<String>,
+    val demoPurged: Int = 0
+)
 
 /**
  * SAF 导入处理器：将用户选择的音频复制到应用私有目录（避免 URI 授权失效后无法访问），
@@ -28,8 +32,9 @@ class AudioImporter @Inject constructor(
     private val recordDao: CallRecordDao
 ) {
 
-    /** 逐个导入，单文件失败不中断整批 */
+    /** 逐个导入，单文件失败不中断整批；首次导入真实录音时顺带清除预置演示数据 */
     suspend fun import(uris: List<Uri>): ImportResult = withContext(Dispatchers.IO) {
+        val demoPurged = if (recordDao.count() > 0) recordDao.deleteDemoRecords() else 0
         var success = 0
         val failed = mutableListOf<String>()
         for (uri in uris) {
@@ -40,7 +45,7 @@ class AudioImporter @Inject constructor(
                 failed += resolveDisplayName(uri)
             }
         }
-        ImportResult(success, failed)
+        ImportResult(success, failed, demoPurged)
     }
 
     private suspend fun importOne(uri: Uri) {

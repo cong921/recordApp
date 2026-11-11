@@ -2,7 +2,9 @@ package com.callnote.app.work
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -11,6 +13,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.callnote.app.MainActivity
 import com.callnote.app.R
 import com.callnote.app.data.classification.LocalClassifier
 import com.callnote.app.data.model.TaskStatus
@@ -79,6 +82,8 @@ class TranscriptionWorker @AssistedInject constructor(
             engine.close()
         }
 
+        notifyResult(successCount, failedCount)
+
         return Result.success(
             workDataOf(
                 KEY_DONE to successCount,
@@ -122,6 +127,32 @@ class TranscriptionWorker @AssistedInject constructor(
         }
     }
 
+    /** 结束后发一条可点击的结果通知（前台进度通知会随 Worker 结束自动撤下） */
+    private fun notifyResult(successCount: Int, failedCount: Int) {
+        val text = if (failedCount == 0) {
+            "成功 $successCount 条，可到录音页查看全文"
+        } else {
+            "成功 $successCount 条，失败 $failedCount 条（详情页可查看原因并重试）"
+        }
+        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("转写完成")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(mainIntent())
+            .setAutoCancel(true)
+            .build()
+        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(RESULT_NOTIFICATION_ID, notification)
+    }
+
+    private fun mainIntent(): PendingIntent = PendingIntent.getActivity(
+        applicationContext,
+        0,
+        Intent(applicationContext, MainActivity::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
     private fun createForegroundInfo(current: Int, total: Int): ForegroundInfo {
         val title = if (total == 0) "正在准备转写" else "正在本地转写（$current/$total）"
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
@@ -131,6 +162,7 @@ class TranscriptionWorker @AssistedInject constructor(
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
+            .setContentIntent(mainIntent())
             .setProgress(total.coerceAtLeast(1), current, total == 0)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -148,6 +180,7 @@ class TranscriptionWorker @AssistedInject constructor(
         const val UNIQUE_WORK_NAME = "batch_transcription"
         const val CHANNEL_ID = "transcription"
         const val NOTIFICATION_ID = 1001
+        const val RESULT_NOTIFICATION_ID = 1002
         const val KEY_ERROR = "error"
         const val KEY_DONE = "done"
         const val KEY_FAILED = "failed"

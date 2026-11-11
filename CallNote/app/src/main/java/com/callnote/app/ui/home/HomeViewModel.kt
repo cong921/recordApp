@@ -84,6 +84,9 @@ class HomeViewModel @Inject constructor(
                 if (result.failedFiles.isNotEmpty()) {
                     append("，${result.failedFiles.size} 个文件导入失败")
                 }
+                if (result.demoPurged > 0) {
+                    append("；已清除 ${result.demoPurged} 条演示数据")
+                }
             }
         }
     }

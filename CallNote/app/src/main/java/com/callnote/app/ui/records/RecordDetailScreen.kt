@@ -345,8 +345,10 @@ fun RecordDetailScreen(
                     }
                 }
 
-                // 未产生任何文本内容的兜底提示
-                if (r.transcriptionText.isNullOrBlank() && r.summary.isNullOrBlank()) {
+                // 已转写但没有任何文本时的兜底提示（失败/待转写已有各自的卡片）
+                if (r.transcriptionStatus == "COMPLETED" &&
+                    r.transcriptionText.isNullOrBlank() && r.summary.isNullOrBlank()
+                ) {
                     item {
                         EmptyState(
                             icon = Icons.Outlined.Notes,
