@@ -2,11 +2,14 @@ package com.callnote.app.data.repository
 
 import com.callnote.app.data.db.dao.CallCategoryDao
 import com.callnote.app.data.db.dao.CallRecordDao
+import com.callnote.app.data.db.dao.TranscriptionTaskDao
 import com.callnote.app.data.db.entity.CallRecordEntity
 import com.callnote.app.data.db.entity.RecordWithCategory
+import com.callnote.app.data.db.entity.TranscriptionTaskEntity
 import com.callnote.app.data.db.pojo.RecordStats
 import com.callnote.app.data.model.TranscriptionStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,7 +17,8 @@ import javax.inject.Singleton
 @Singleton
 class CallRecordRepository @Inject constructor(
     private val dao: CallRecordDao,
-    private val categoryDao: CallCategoryDao
+    private val categoryDao: CallCategoryDao,
+    private val taskDao: TranscriptionTaskDao
 ) {
 
     fun observeStats(): Flow<RecordStats> = dao.observeStats()
@@ -26,6 +30,14 @@ class CallRecordRepository @Inject constructor(
 
     fun observeRecent(limit: Int = 3): Flow<List<RecordWithCategory>> =
         dao.observeRecentWithCategory(limit)
+
+    /** 单条录音详情（含分类），详情页使用 */
+    fun observeRecord(recordId: Long): Flow<RecordWithCategory?> =
+        dao.observeByIdWithCategory(recordId)
+
+    /** 该录音最近一次转写任务（详情页失败原因展示） */
+    fun observeLatestTask(recordId: Long): Flow<TranscriptionTaskEntity?> =
+        taskDao.observeByRecord(recordId).map { it.firstOrNull() }
 
     fun observeCategoryName(categoryId: Long): Flow<String?> = categoryDao.observeCategoryName(categoryId)
 

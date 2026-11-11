@@ -5,9 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.callnote.app.data.db.entity.CallCategoryEntity
 import com.callnote.app.data.db.entity.RecordWithCategory
-import com.callnote.app.data.repository.CallCategoryRepository
 import com.callnote.app.data.repository.CallRecordRepository
 import com.callnote.app.util.Format
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,8 +42,7 @@ data class RecordListUiState(
 class RecordListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     @ApplicationContext private val appContext: Context,
-    private val recordRepository: CallRecordRepository,
-    categoryRepository: CallCategoryRepository
+    private val recordRepository: CallRecordRepository
 ) : ViewModel() {
 
     // 路由参数类型为 NavType.LongType，必须按 Long 读取（按 String 读取会 ClassCastException）
@@ -53,14 +50,6 @@ class RecordListViewModel @Inject constructor(
 
     private val query = MutableStateFlow("")
     private val filter = MutableStateFlow(RecordFilter.ALL)
-
-    /** 全部分类（手动归类底部弹窗用） */
-    val categories: StateFlow<List<CallCategoryEntity>> = categoryRepository.observeAll()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
-        )
 
     val uiState: StateFlow<RecordListUiState> = combine(
         recordRepository.observeRecords(categoryId),
@@ -110,18 +99,6 @@ class RecordListViewModel @Inject constructor(
 
     fun onFilterChange(newFilter: RecordFilter) {
         filter.value = newFilter
-    }
-
-    /** 手动归类录音；categoryId 为 null 表示移出分类 */
-    fun assignCategory(recordId: Long, categoryId: Long?) {
-        viewModelScope.launch {
-            recordRepository.updateCategory(recordId, categoryId)
-            _message.value = if (categoryId == null) {
-                "已移出分类"
-            } else {
-                "归类成功"
-            }
-        }
     }
 
     /** 将当前列表（应用搜索/筛选/分类后的结果）导出到指定 SAF Uri */

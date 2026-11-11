@@ -30,14 +30,18 @@ import androidx.navigation.navArgument
 import com.callnote.app.ui.categories.CategoryScreen
 import com.callnote.app.ui.home.HomeScreen
 import com.callnote.app.ui.profile.ProfileScreen
+import com.callnote.app.ui.records.RecordDetailScreen
 import com.callnote.app.ui.records.RecordListScreen
 
 object Routes {
     const val HOME = "home"
     const val RECORDS = "records"
     const val RECORDS_FILTERED = "$RECORDS?categoryId={categoryId}"
+    const val RECORD_DETAIL = "record_detail/{recordId}"
     const val CATEGORIES = "categories"
     const val PROFILE = "profile"
+
+    fun recordDetail(recordId: Long) = "record_detail/$recordId"
 }
 
 private data class BottomNavItem(
@@ -102,6 +106,9 @@ fun CallNoteApp(modifier: Modifier = Modifier) {
                 HomeScreen(
                     onNavigateToCategories = {
                         navController.navigate(Routes.CATEGORIES) { launchSingleTop = true }
+                    },
+                    onRecordClick = { recordId ->
+                        navController.navigate(Routes.recordDetail(recordId)) { launchSingleTop = true }
                     }
                 )
             }
@@ -114,7 +121,24 @@ fun CallNoteApp(modifier: Modifier = Modifier) {
                     }
                 )
             ) {
-                RecordListScreen()
+                RecordListScreen(
+                    onRecordClick = { recordId ->
+                        navController.navigate(Routes.recordDetail(recordId)) { launchSingleTop = true }
+                    }
+                )
+            }
+            composable(
+                route = Routes.RECORD_DETAIL,
+                arguments = listOf(
+                    navArgument("recordId") {
+                        type = NavType.LongType
+                        defaultValue = -1L
+                    }
+                )
+            ) {
+                RecordDetailScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Routes.CATEGORIES) {
                 CategoryScreen(

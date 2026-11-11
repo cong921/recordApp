@@ -64,6 +64,7 @@ import com.callnote.app.util.Format
 @Composable
 fun HomeScreen(
     onNavigateToCategories: () -> Unit,
+    onRecordClick: (Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -168,9 +169,13 @@ fun HomeScreen(
                     )
                 }
                 items(uiState.recentRecords, key = { it.record.id }) { item ->
-                    RecordListItem(item = item, trailing = {
-                        StatusBadge(statusName = item.record.transcriptionStatus)
-                    })
+                    RecordListItem(
+                        item = item,
+                        onClick = { onRecordClick(item.record.id) },
+                        trailing = {
+                            StatusBadge(statusName = item.record.transcriptionStatus)
+                        }
+                    )
                 }
             }
         }

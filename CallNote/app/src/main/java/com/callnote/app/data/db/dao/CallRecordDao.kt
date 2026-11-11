@@ -68,6 +68,10 @@ interface CallRecordDao {
     @Query("SELECT * FROM call_record WHERE id = :id")
     fun observeById(id: Long): Flow<CallRecordEntity?>
 
+    @Transaction
+    @Query("SELECT * FROM call_record WHERE id = :id")
+    fun observeByIdWithCategory(id: Long): Flow<RecordWithCategory?>
+
     @Query(
         """
         SELECT COUNT(*) AS totalCount,

@@ -16,8 +16,8 @@ android {
         applicationId = "com.callnote.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.0"
+        versionCode = 9
+        versionName = "1.1.0"
 
         ndk {
             // arm64 真机 + x86_64 模拟器
