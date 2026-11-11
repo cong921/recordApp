@@ -43,6 +43,8 @@ android {
             // 第八阶段开启 R8 混淆 + 资源收缩，配套 keep 规则见 proguard-rules.pro
             isMinifyEnabled = true
             isShrinkResources = true
+            // 借用 debug 签名让 release 包可直接安装体验；正式发布前替换为专用 keystore
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

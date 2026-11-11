@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.callnote.app.data.classification.LocalClassifier
 import com.callnote.app.data.db.entity.RecordWithCategory
@@ -72,6 +73,23 @@ class HomeViewModel @Inject constructor(
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private val _isTranscribing = MutableStateFlow(false)
+
+    /** 批量转写是否在队列中/运行中（重复发起时提示"已追加"而非"已开始"） */
+    val isTranscribing: StateFlow<Boolean> = _isTranscribing.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            WorkManager.getInstance(context)
+                .getWorkInfosForUniqueWorkFlow(TranscriptionWorker.UNIQUE_WORK_NAME)
+                .collect { infos ->
+                    _isTranscribing.value = infos.any {
+                        it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+                    }
+                }
+        }
+    }
+
     /** 导入用户通过 SAF 选中的音频文件；导入中防重复触发 */
     fun importUris(uris: List<Uri>) {
         if (uris.isEmpty() || _importing.value) return
@@ -106,10 +124,15 @@ class HomeViewModel @Inject constructor(
             }
             WorkManager.getInstance(context).enqueueUniqueWork(
                 TranscriptionWorker.UNIQUE_WORK_NAME,
-                ExistingWorkPolicy.KEEP,
+                // APPEND_OR_REPLACE：详情页重试/新发起的记录要能追加到运行中的批次之后
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<TranscriptionWorker>().build()
             )
-            _message.value = "已开始本地转写 $pendingCount 条录音，进度见通知栏"
+            _message.value = if (isTranscribing.value) {
+                "已追加到当前转写队列，进度见通知栏"
+            } else {
+                "已开始本地转写 $pendingCount 条录音，进度见通知栏"
+            }
         }
     }
 

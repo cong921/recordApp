@@ -71,11 +71,15 @@ class RecordDetailViewModel @Inject constructor(
         }
     }
 
-    /** 失败重试：状态回到待转写并加入转写队列（校验逻辑与首页批量转写一致） */
-    fun retryTranscription() {
+    /**
+     * 发起转写：FAILED 重试 / PENDING 直接开始，无需回首页。
+     * APPEND_OR_REPLACE：批量正在跑时把本条追加到队尾（运行中的 Worker 持有旧快照，
+     * KEEP 会丢弃新请求导致这条记录无人处理）；链已失败则重开。
+     */
+    fun startTranscription() {
         val current = record.value?.record ?: return
-        if (current.transcriptionStatus != "FAILED") {
-            _message.value = "当前状态无需重试"
+        if (current.transcriptionStatus != "FAILED" && current.transcriptionStatus != "PENDING") {
+            _message.value = "当前状态无需转写"
             return
         }
         if (modelManager.selected.value == null) {
@@ -83,10 +87,12 @@ class RecordDetailViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            recordRepository.resetForRetry(recordId)
+            if (current.transcriptionStatus == "FAILED") {
+                recordRepository.resetForRetry(recordId)
+            }
             WorkManager.getInstance(appContext).enqueueUniqueWork(
                 TranscriptionWorker.UNIQUE_WORK_NAME,
-                ExistingWorkPolicy.KEEP,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<TranscriptionWorker>().build()
             )
             _message.value = "已加入转写队列，进度见通知栏"

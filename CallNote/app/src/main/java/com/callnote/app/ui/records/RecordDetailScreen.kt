@@ -1,5 +1,9 @@
 package com.callnote.app.ui.records
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,12 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.Notes
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,9 +48,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,6 +63,7 @@ import com.callnote.app.ui.components.CategoryPickerSheet
 import com.callnote.app.ui.components.EmptyState
 import com.callnote.app.ui.components.StatusBadge
 import com.callnote.app.util.Format
+import kotlinx.coroutines.launch
 
 /** 录音详情页：文件信息 + 分类管理 + 摘要 / 关键词 / 转写全文 / 失败原因 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +78,11 @@ fun RecordDetailScreen(
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val clipboard = remember {
+        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -227,7 +242,7 @@ fun RecordDetailScreen(
                                         )
                                     }
                                 }
-                                TextButton(onClick = viewModel::retryTranscription) {
+                                TextButton(onClick = viewModel::startTranscription) {
                                     Icon(
                                         Icons.Outlined.Refresh,
                                         contentDescription = null,
@@ -242,31 +257,51 @@ fun RecordDetailScreen(
                     }
 
                     "PENDING", "PROCESSING" -> item {
+                        val isPending = r.transcriptionStatus == "PENDING"
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerLow
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Outlined.HourglassTop,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    text = if (r.transcriptionStatus == "PROCESSING") {
-                                        "正在转写中，稍后回来查看"
+                            Column(Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp, end = 8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (isPending) {
+                                        Icon(
+                                            Icons.Outlined.HourglassTop,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     } else {
-                                        "等待转写：回到首页点「批量转写」即可处理"
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = if (isPending) {
+                                            "等待转写"
+                                        } else {
+                                            "正在本地转写中，完成后此页自动更新"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (isPending) {
+                                        TextButton(onClick = viewModel::startTranscription) {
+                                            Icon(
+                                                Icons.Outlined.PlayArrow,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("开始转写")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -327,11 +362,55 @@ fun RecordDetailScreen(
                             color = MaterialTheme.colorScheme.surfaceContainerLow
                         ) {
                             Column(Modifier.padding(16.dp)) {
-                                Text(
-                                    "转写内容",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "转写内容",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(onClick = {
+                                        clipboard.setPrimaryClip(
+                                            ClipData.newPlainText("转写内容", text)
+                                        )
+                                        scope.launch { snackbarHostState.showSnackbar("已复制全文") }
+                                    }) {
+                                        Icon(
+                                            Icons.Outlined.ContentCopy,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("复制")
+                                    }
+                                    TextButton(onClick = {
+                                        // 复用列表页导出格式：头信息 + 分类 + 摘要 + 关键词 + 全文
+                                        val shareContent = RecordListViewModel.buildExportText(
+                                            listOf(loaded)
+                                        )
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, shareContent)
+                                            putExtra(Intent.EXTRA_TITLE, r.fileName)
+                                        }
+                                        context.startActivity(
+                                            Intent.createChooser(send, "分享转写内容").apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                        )
+                                    }) {
+                                        Icon(
+                                            Icons.Outlined.Share,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("分享")
+                                    }
+                                }
                                 Spacer(Modifier.height(6.dp))
                                 SelectionContainer {
                                     Text(
