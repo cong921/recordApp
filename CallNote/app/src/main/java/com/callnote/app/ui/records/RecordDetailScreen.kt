@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Notes
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,10 +79,29 @@ fun RecordDetailScreen(
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showPicker by remember { mutableStateOf(false) }
+    var showRetranscribeDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clipboard = remember {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    }
+
+    // 重新转写确认（COMPLETED 状态下会覆盖已有文本，弹窗防误触）
+    if (showRetranscribeDialog) {
+        AlertDialog(
+            onDismissRequest = { showRetranscribeDialog = false },
+            title = { Text("重新转写") },
+            text = { Text("将使用当前选择的模型重新转写，并覆盖现有的转写文本、摘要与关键词。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRetranscribeDialog = false
+                    viewModel.startTranscription()
+                }) { Text("重新转写") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRetranscribeDialog = false }) { Text("取消") }
+            }
+        )
     }
 
     LaunchedEffect(message) {
@@ -110,6 +130,18 @@ fun RecordDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    // 转写中不显示；已完成走确认弹窗（覆盖旧文本），其余状态直接发起
+                    val st = record?.record?.transcriptionStatus
+                    if (st != null && st != "PROCESSING") {
+                        IconButton(onClick = {
+                            if (st == "COMPLETED") showRetranscribeDialog = true
+                            else viewModel.startTranscription()
+                        }) {
+                            Icon(Icons.Outlined.Refresh, contentDescription = "重新转写")
+                        }
                     }
                 }
             )

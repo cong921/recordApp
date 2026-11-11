@@ -72,22 +72,32 @@ class RecordDetailViewModel @Inject constructor(
     }
 
     /**
-     * 发起转写：FAILED 重试 / PENDING 直接开始，无需回首页。
+     * 发起转写：PENDING 直接开始 / FAILED 重试 / COMPLETED 重新转写（覆盖旧文本）。
+     * 重新转写前清空旧结果并回到待转写状态，换模型后重转即用新模型。
      * APPEND_OR_REPLACE：批量正在跑时把本条追加到队尾（运行中的 Worker 持有旧快照，
      * KEEP 会丢弃新请求导致这条记录无人处理）；链已失败则重开。
      */
     fun startTranscription() {
         val current = record.value?.record ?: return
-        if (current.transcriptionStatus != "FAILED" && current.transcriptionStatus != "PENDING") {
-            _message.value = "当前状态无需转写"
-            return
+        when (current.transcriptionStatus) {
+            "PROCESSING" -> {
+                _message.value = "正在转写中，请稍候"
+                return
+            }
+            "PENDING" -> Unit
+            "FAILED", "COMPLETED" -> Unit
+            else -> {
+                _message.value = "当前状态不支持转写"
+                return
+            }
         }
         if (modelManager.selected.value == null) {
             _message.value = "请先在「我的 → 语音转写引擎」下载并选择模型"
             return
         }
+        val isRetranscribe = current.transcriptionStatus == "COMPLETED"
         viewModelScope.launch {
-            if (current.transcriptionStatus == "FAILED") {
+            if (current.transcriptionStatus != "PENDING") {
                 recordRepository.resetForRetry(recordId)
             }
             WorkManager.getInstance(appContext).enqueueUniqueWork(
@@ -95,7 +105,11 @@ class RecordDetailViewModel @Inject constructor(
                 ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<TranscriptionWorker>().build()
             )
-            _message.value = "已加入转写队列，进度见通知栏"
+            _message.value = if (isRetranscribe) {
+                "正在重新转写，完成后自动更新"
+            } else {
+                "已加入转写队列，进度见通知栏"
+            }
         }
     }
 
