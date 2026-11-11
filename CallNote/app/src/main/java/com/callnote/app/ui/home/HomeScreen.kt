@@ -68,6 +68,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
+    val classifying by viewModel.classifying.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -135,7 +136,7 @@ fun HomeScreen(
                         importing = importing,
                         onImport = { importLauncher.launch(arrayOf("audio/*")) },
                         onTranscribe = viewModel::startBatchTranscription,
-                        onClassify = onNavigateToCategories,
+                        onClassify = viewModel::startBatchClassification,
                         onClean = { showComingSoon("批量清理", "第六阶段") }
                     )
                 }

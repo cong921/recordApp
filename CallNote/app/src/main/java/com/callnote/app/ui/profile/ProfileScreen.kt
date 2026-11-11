@@ -349,7 +349,7 @@ private fun RoadmapCard() {
         RoadmapRow(label = "录音导入与管理（SAF）", phase = "第二阶段", done = true)
         RoadmapRow(label = "Whisper.cpp 本地集成", phase = "第三阶段", done = true)
         RoadmapRow(label = "批量转写与任务管理", phase = "第四阶段", done = true)
-        RoadmapRow(label = "本地智能分类", phase = "第五阶段", done = false)
+        RoadmapRow(label = "本地智能分类", phase = "第五阶段", done = true)
         RoadmapRow(label = "分类管理与批量清理", phase = "第六阶段", done = false)
         RoadmapRow(label = "全文搜索与导出 TXT", phase = "第七阶段", done = false)
         RoadmapRow(label = "性能优化与真机测试", phase = "第八阶段", done = false)

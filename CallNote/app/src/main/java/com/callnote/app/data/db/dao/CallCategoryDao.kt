@@ -26,6 +26,9 @@ interface CallCategoryDao {
     @Query("SELECT * FROM call_category WHERE id = :id")
     suspend fun getById(id: Long): CallCategoryEntity?
 
+    @Query("SELECT * FROM call_category WHERE categoryCode = :code LIMIT 1")
+    suspend fun getByCode(code: String): CallCategoryEntity?
+
     @Query("SELECT categoryName FROM call_category WHERE id = :id")
     fun observeCategoryName(id: Long): Flow<String?>
 

@@ -32,6 +32,15 @@ interface CallRecordDao {
     @Query("SELECT * FROM call_record WHERE transcriptionStatus = 'PENDING' ORDER BY callTime ASC")
     suspend fun getPendingRecords(): List<CallRecordEntity>
 
+    @Query(
+        """
+        SELECT * FROM call_record
+        WHERE transcriptionStatus = 'COMPLETED' AND categoryId IS NULL
+        ORDER BY callTime ASC
+        """
+    )
+    suspend fun getUnclassifiedCompleted(): List<CallRecordEntity>
+
     @Query("UPDATE call_record SET transcriptionStatus = :status, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateStatus(id: Long, status: String, updatedAt: Long)
 
@@ -77,6 +86,12 @@ interface CallRecordDao {
 
     @Query("UPDATE call_record SET categoryId = :categoryId, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateCategory(id: Long, categoryId: Long?, updatedAt: Long)
+
+    @Query("UPDATE call_record SET classificationScore = :score, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateClassificationScore(id: Long, score: Double, updatedAt: Long)
+
+    @Query("UPDATE call_record SET summary = :summary, keywords = :keywords, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSummaryAndKeywords(id: Long, summary: String, keywords: String, updatedAt: Long)
 
     @Query(
         """

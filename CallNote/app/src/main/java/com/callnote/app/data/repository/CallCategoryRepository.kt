@@ -17,4 +17,7 @@ class CallCategoryRepository @Inject constructor(
     fun observeAll(): Flow<List<CallCategoryEntity>> = dao.observeAll()
 
     suspend fun getById(id: Long): CallCategoryEntity? = dao.getById(id)
+
+    /** 按分类编码查询（第五阶段智能分类回填 categoryId 用） */
+    suspend fun getByCode(code: String): CallCategoryEntity? = dao.getByCode(code)
 }

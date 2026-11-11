@@ -7,9 +7,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.callnote.app.data.classification.LocalClassifier
 import com.callnote.app.data.db.entity.RecordWithCategory
 import com.callnote.app.data.db.pojo.RecordStats
 import com.callnote.app.data.importer.AudioImporter
+import com.callnote.app.data.repository.CallCategoryRepository
 import com.callnote.app.data.repository.CallRecordRepository
 import com.callnote.app.data.whisper.WhisperModelManager
 import com.callnote.app.work.TranscriptionWorker
@@ -34,8 +36,10 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val recordRepository: CallRecordRepository,
+    private val categoryRepository: CallCategoryRepository,
     private val audioImporter: AudioImporter,
-    private val modelManager: WhisperModelManager
+    private val modelManager: WhisperModelManager,
+    private val classifier: LocalClassifier
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -55,6 +59,9 @@ class HomeViewModel @Inject constructor(
 
     private val _importing = MutableStateFlow(false)
     val importing: StateFlow<Boolean> = _importing.asStateFlow()
+
+    private val _classifying = MutableStateFlow(false)
+    val classifying: StateFlow<Boolean> = _classifying.asStateFlow()
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -94,6 +101,42 @@ class HomeViewModel @Inject constructor(
                 OneTimeWorkRequestBuilder<TranscriptionWorker>().build()
             )
             _message.value = "已开始本地转写 $pendingCount 条录音，进度见通知栏"
+        }
+    }
+
+    /**
+     * 批量智能分类：对已转写但未分类的记录执行本地规则分类。
+     * 词典扫描毫秒级完成，直接在协程中执行，无需 Worker。
+     */
+    fun startBatchClassification() {
+        if (_classifying.value) return
+        viewModelScope.launch {
+            _classifying.value = true
+            try {
+                val records = recordRepository.getUnclassifiedCompleted()
+                if (records.isEmpty()) {
+                    _message.value = "没有待分类的录音（需先完成转写）"
+                    return@launch
+                }
+                var classified = 0
+                for (record in records) {
+                    val text = record.transcriptionText ?: continue
+                    val result = classifier.classify(text)
+                    if (result.categoryCode == null) continue
+                    val category = categoryRepository.getByCode(result.categoryCode) ?: continue
+                    recordRepository.applyClassification(record.id, category.id, result.score)
+                    // 摘要与关键词在转写时已生成，未生成的补齐
+                    if (record.summary.isNullOrBlank() && result.summary.isNotEmpty()) {
+                        recordRepository.updateSummaryAndKeywords(
+                            record.id, result.summary, result.keywords.joinToString("，")
+                        )
+                    }
+                    classified++
+                }
+                _message.value = "智能分类完成：$classified / ${records.size} 条命中分类"
+            } finally {
+                _classifying.value = false
+            }
         }
     }
 

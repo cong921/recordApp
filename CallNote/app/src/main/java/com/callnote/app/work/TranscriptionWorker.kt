@@ -12,8 +12,10 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.callnote.app.R
+import com.callnote.app.data.classification.LocalClassifier
 import com.callnote.app.data.model.TaskStatus
 import com.callnote.app.data.model.TranscriptionStatus
+import com.callnote.app.data.repository.CallCategoryRepository
 import com.callnote.app.data.repository.CallRecordRepository
 import com.callnote.app.data.repository.TranscriptionTaskRepository
 import com.callnote.app.data.whisper.WhisperModelManager
@@ -32,8 +34,10 @@ class TranscriptionWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val recordRepository: CallRecordRepository,
+    private val categoryRepository: CallCategoryRepository,
     private val taskRepository: TranscriptionTaskRepository,
     private val modelManager: WhisperModelManager,
+    private val classifier: LocalClassifier,
     private val engine: TranscriptionEngine
 ) : CoroutineWorker(appContext, params) {
 
@@ -93,7 +97,18 @@ class TranscriptionWorker @AssistedInject constructor(
                 throw IOException("音频文件不存在或已被清理")
             }
             val text = engine.transcribe(path)
-            recordRepository.updateRecordTranscription(recordId, text)
+            // 第五阶段：转写完成后本地规则分类（摘要/关键词/置信度一并生成）
+            val classification = classifier.classify(text)
+            val category = classification.categoryCode
+                ?.let { categoryRepository.getByCode(it) }
+            recordRepository.updateRecordTranscription(
+                recordId = recordId,
+                text = text,
+                summary = classification.summary,
+                keywords = classification.keywords.joinToString("，"),
+                categoryId = category?.id,
+                classificationScore = if (classification.categoryCode != null) classification.score else null
+            )
             taskRepository.updateTaskStatus(recordId, TaskStatus.COMPLETED, progress = 100)
             return true
         } catch (e: Exception) {
