@@ -28,6 +28,15 @@ interface TranscriptionTaskDao {
     @Query("SELECT * FROM transcription_task WHERE recordId = :recordId ORDER BY createdAt DESC LIMIT 1")
     suspend fun getLatestByRecord(recordId: Long): TranscriptionTaskEntity?
 
+    @Query(
+        """
+        UPDATE transcription_task
+        SET status = 'PENDING', errorMessage = NULL, progress = 0, updatedAt = :updatedAt
+        WHERE recordId = :recordId
+        """
+    )
+    suspend fun resetByRecord(recordId: Long, updatedAt: Long)
+
     @Query("DELETE FROM transcription_task WHERE recordId = :recordId")
     suspend fun deleteByRecord(recordId: Long)
 }

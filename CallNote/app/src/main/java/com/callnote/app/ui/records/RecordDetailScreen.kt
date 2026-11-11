@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.Notes
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -203,7 +204,7 @@ fun RecordDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp),
-                                verticalAlignment = Alignment.Top
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     Icons.Outlined.ErrorOutline,
@@ -211,7 +212,7 @@ fun RecordDetailScreen(
                                     tint = MaterialTheme.colorScheme.onErrorContainer
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Column {
+                                Column(Modifier.weight(1f)) {
                                     Text(
                                         text = "转写失败",
                                         style = MaterialTheme.typography.titleSmall,
@@ -225,6 +226,16 @@ fun RecordDetailScreen(
                                             color = MaterialTheme.colorScheme.onErrorContainer
                                         )
                                     }
+                                }
+                                TextButton(onClick = viewModel::retryTranscription) {
+                                    Icon(
+                                        Icons.Outlined.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("重试", color = MaterialTheme.colorScheme.onErrorContainer)
                                 }
                             }
                         }

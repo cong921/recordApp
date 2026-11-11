@@ -1,19 +1,25 @@
 package com.callnote.app.ui.records
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.callnote.app.data.db.entity.CallCategoryEntity
 import com.callnote.app.data.db.entity.RecordWithCategory
 import com.callnote.app.data.db.entity.TranscriptionTaskEntity
 import com.callnote.app.data.repository.CallCategoryRepository
 import com.callnote.app.data.repository.CallRecordRepository
+import com.callnote.app.data.whisper.WhisperModelManager
+import com.callnote.app.work.TranscriptionWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,7 +28,9 @@ import javax.inject.Inject
 @HiltViewModel
 class RecordDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val appContext: Context,
     private val recordRepository: CallRecordRepository,
+    private val modelManager: WhisperModelManager,
     categoryRepository: CallCategoryRepository
 ) : ViewModel() {
 
@@ -60,6 +68,28 @@ class RecordDetailViewModel @Inject constructor(
         viewModelScope.launch {
             recordRepository.updateCategory(recordId, categoryId)
             _message.value = if (categoryId == null) "已移出分类" else "归类成功"
+        }
+    }
+
+    /** 失败重试：状态回到待转写并加入转写队列（校验逻辑与首页批量转写一致） */
+    fun retryTranscription() {
+        val current = record.value?.record ?: return
+        if (current.transcriptionStatus != "FAILED") {
+            _message.value = "当前状态无需重试"
+            return
+        }
+        if (modelManager.selected.value == null) {
+            _message.value = "请先在「我的 → 语音转写引擎」下载并选择模型"
+            return
+        }
+        viewModelScope.launch {
+            recordRepository.resetForRetry(recordId)
+            WorkManager.getInstance(appContext).enqueueUniqueWork(
+                TranscriptionWorker.UNIQUE_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<TranscriptionWorker>().build()
+            )
+            _message.value = "已加入转写队列，进度见通知栏"
         }
     }
 

@@ -58,6 +58,13 @@ class CallRecordRepository @Inject constructor(
     suspend fun updateRecordStatus(recordId: Long, status: TranscriptionStatus) =
         dao.updateStatus(recordId, status.name, System.currentTimeMillis())
 
+    /** 失败重试：记录状态回到待转写，并清除上次的失败原因 */
+    suspend fun resetForRetry(recordId: Long) {
+        val now = System.currentTimeMillis()
+        dao.updateStatus(recordId, TranscriptionStatus.PENDING.name, now)
+        taskDao.resetByRecord(recordId, now)
+    }
+
     /** 转写成功：写入文本、摘要、关键词并标记完成；命中分类时一并写入 */
     suspend fun updateRecordTranscription(
         recordId: Long,
