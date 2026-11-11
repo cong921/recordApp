@@ -68,7 +68,7 @@ fun HomeScreen(
 
     fun showComingSoon(feature: String, phase: String) {
         scope.launch {
-            snackbarHostState.showSnackbar("$feature将在$phase开放")
+            snackbarHostState.showSnackbar("${feature}将在${phase}开放")
         }
     }
 

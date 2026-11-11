@@ -1,5 +1,6 @@
 package com.callnote.app.data.repository
 
+import com.callnote.app.data.db.dao.CallCategoryDao
 import com.callnote.app.data.db.dao.CallRecordDao
 import com.callnote.app.data.db.entity.RecordWithCategory
 import com.callnote.app.data.db.pojo.RecordStats
@@ -10,7 +11,8 @@ import javax.inject.Singleton
 /** 录音数据仓库：UI 层唯一的数据入口 */
 @Singleton
 class CallRecordRepository @Inject constructor(
-    private val dao: CallRecordDao
+    private val dao: CallRecordDao,
+    private val categoryDao: CallCategoryDao
 ) {
 
     fun observeStats(): Flow<RecordStats> = dao.observeStats()
@@ -23,7 +25,7 @@ class CallRecordRepository @Inject constructor(
     fun observeRecent(limit: Int = 3): Flow<List<RecordWithCategory>> =
         dao.observeRecentWithCategory(limit)
 
-    fun observeCategoryName(categoryId: Long): Flow<String?> = dao.observeCategoryName(categoryId)
+    fun observeCategoryName(categoryId: Long): Flow<String?> = categoryDao.observeCategoryName(categoryId)
 
     fun search(query: String) = dao.search(query)
 
