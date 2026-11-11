@@ -48,7 +48,8 @@ class RecordListViewModel @Inject constructor(
     categoryRepository: CallCategoryRepository
 ) : ViewModel() {
 
-    private val categoryId: Long = savedStateHandle.get<String>("categoryId")?.toLongOrNull() ?: -1L
+    // 路由参数类型为 NavType.LongType，必须按 Long 读取（按 String 读取会 ClassCastException）
+    private val categoryId: Long = savedStateHandle.get<Long>("categoryId") ?: -1L
 
     private val query = MutableStateFlow("")
     private val filter = MutableStateFlow(RecordFilter.ALL)
