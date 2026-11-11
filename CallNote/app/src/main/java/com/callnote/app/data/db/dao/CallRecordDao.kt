@@ -29,6 +29,12 @@ interface CallRecordDao {
     @Query("SELECT COUNT(*) FROM call_record")
     suspend fun count(): Int
 
+    @Query("SELECT * FROM call_record WHERE transcriptionStatus = 'PENDING' ORDER BY callTime ASC")
+    suspend fun getPendingRecords(): List<CallRecordEntity>
+
+    @Query("UPDATE call_record SET transcriptionStatus = :status, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: String, updatedAt: Long)
+
     @Transaction
     @Query("SELECT * FROM call_record ORDER BY callTime DESC")
     fun observeAllWithCategory(): Flow<List<RecordWithCategory>>

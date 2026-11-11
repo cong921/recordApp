@@ -16,8 +16,26 @@ android {
         applicationId = "com.callnote.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
+
+        ndk {
+            // 先只编 64 位 ARM（真机）；模拟器 x86_64 以后按需放开
+            abiFilters += listOf("arm64-v8a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                // GGML_OPENMP=OFF：规避 NDK libomp 链接问题，线程改走 pthread
+                // GGML_NATIVE=OFF：禁用 -march=native（交叉编译不支持）
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DGGML_OPENMP=OFF",
+                    "-DGGML_NATIVE=OFF",
+                    "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -38,6 +56,13 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 }
 
@@ -82,6 +107,11 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+
+    // WorkManager + Hilt Worker
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.hilt.work)
+    kapt(libs.androidx.hilt.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
 

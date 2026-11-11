@@ -17,6 +17,9 @@ class TranscriptionTaskRepository @Inject constructor(
 
     fun observeAll(): Flow<List<TranscriptionTaskEntity>> = dao.observeAll()
 
+    suspend fun getLatestByRecord(recordId: Long): TranscriptionTaskEntity? =
+        dao.getLatestByRecord(recordId)
+
     suspend fun createTask(recordId: Long): Long {
         val now = System.currentTimeMillis()
         return dao.insert(
@@ -25,6 +28,24 @@ class TranscriptionTaskRepository @Inject constructor(
                 status = TaskStatus.PENDING.name,
                 createdAt = now,
                 updatedAt = now
+            )
+        )
+    }
+
+    /** 更新任务状态与错误信息 */
+    suspend fun updateTaskStatus(
+        recordId: Long,
+        status: TaskStatus,
+        progress: Int = 0,
+        errorMessage: String? = null
+    ) {
+        val task = dao.getLatestByRecord(recordId) ?: return
+        dao.update(
+            task.copy(
+                status = status.name,
+                progress = progress,
+                errorMessage = errorMessage ?: task.errorMessage,
+                updatedAt = System.currentTimeMillis()
             )
         )
     }

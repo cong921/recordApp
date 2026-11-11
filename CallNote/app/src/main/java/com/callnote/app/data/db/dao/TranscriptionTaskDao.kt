@@ -25,6 +25,9 @@ interface TranscriptionTaskDao {
     @Query("SELECT * FROM transcription_task ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<TranscriptionTaskEntity>>
 
+    @Query("SELECT * FROM transcription_task WHERE recordId = :recordId ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getLatestByRecord(recordId: Long): TranscriptionTaskEntity?
+
     @Query("DELETE FROM transcription_task WHERE recordId = :recordId")
     suspend fun deleteByRecord(recordId: Long)
 }

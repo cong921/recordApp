@@ -130,6 +130,9 @@ class WhisperModelManager @Inject constructor(
         refreshFiles()
     }
 
+    /** 模型本地文件（第四阶段转写引擎加载用）；文件可能尚未下载 */
+    fun modelFileFor(model: WhisperModel): File = File(modelsDir(), model.fileName)
+
     private suspend fun downloadInternal(model: WhisperModel) {
         val dir = modelsDir()
         val dest = File(dir, model.fileName)

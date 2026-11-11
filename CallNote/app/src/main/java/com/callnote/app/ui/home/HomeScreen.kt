@@ -68,7 +68,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val importing by viewModel.importing.collectAsStateWithLifecycle()
-    val importMessage by viewModel.importMessage.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -78,10 +78,10 @@ fun HomeScreen(
         if (uris.isNotEmpty()) viewModel.importUris(uris)
     }
 
-    LaunchedEffect(importMessage) {
-        importMessage?.let {
+    LaunchedEffect(message) {
+        message?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.consumeImportMessage()
+            viewModel.consumeMessage()
         }
     }
 
@@ -134,7 +134,7 @@ fun HomeScreen(
                     QuickActions(
                         importing = importing,
                         onImport = { importLauncher.launch(arrayOf("audio/*")) },
-                        onTranscribe = { showComingSoon("批量转写", "第四阶段") },
+                        onTranscribe = viewModel::startBatchTranscription,
                         onClassify = onNavigateToCategories,
                         onClean = { showComingSoon("批量清理", "第六阶段") }
                     )

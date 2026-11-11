@@ -3,6 +3,10 @@
 
     <!-- 仅供第三阶段 Whisper 模型下载使用；本地转写与所有核心功能均不需要网络 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 第四阶段：批量转写前台服务与进度通知 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".CallNoteApplication"
