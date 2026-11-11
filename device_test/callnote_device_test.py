@@ -140,9 +140,20 @@ def screenshot(adb, path):
     return False
 
 
-def crash_scan(adb, since_clear=False):
-    out = adb.run("logcat", "-d", "-s", "AndroidRuntime:E", timeout=30)
+def crash_scan(adb):
+    """读取 crash 专用缓冲区（完整保留 FATAL EXCEPTION 堆栈）。"""
+    out = adb.run("logcat", "-d", "-b", "crash", timeout=30)
     return "FATAL EXCEPTION" in out, out
+
+
+def save_crash_log(adb, here):
+    crashed, out = crash_scan(adb)
+    if crashed:
+        path = os.path.join(here, "callnote_crash_log.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(out)
+        log(f"完整崩溃日志已保存：{path}（请一并发回）")
+    return crashed, out
 
 
 # ---------------------------------------------------------------- 主流程
@@ -194,12 +205,11 @@ def main():
 
     # 4. 冷启动
     adb.run("logcat", "-c")
+    adb.run("logcat", "-b", "crash", "-c")
     adb.shell(f"am start -n {ACTIVITY}")
     time.sleep(6)
-    crashed, crash_log = crash_scan(adb)
-    result("冷启动无崩溃", not crashed, "见报告末尾日志" if crashed else "")
-    if crashed:
-        log(crash_log[-2000:])
+    crashed, _ = save_crash_log(adb, here)
+    result("冷启动无崩溃", not crashed, "见 callnote_crash_log.txt" if crashed else "")
 
     # 5. 首页
     root = uidump(adb)
@@ -250,16 +260,15 @@ def main():
     db_out = adb.shell(f"run-as {PKG} ls databases")
     result("Room 数据库落盘", "callnote" in db_out, db_out.replace("\n", "  ")[:120])
 
-    # 11. 冷重启稳定性
+    # 11. 冷重启稳定性（先清 crash 缓冲区，只统计重启后新产生的崩溃）
+    adb.run("logcat", "-b", "crash", "-c")
     adb.shell(f"am force-stop {PKG}")
     time.sleep(2)
     adb.shell(f"am start -n {ACTIVITY}")
     time.sleep(6)
-    crashed, crash_log = crash_scan(adb)
+    crashed, _ = save_crash_log(adb, here)
     restart_ok = (not crashed) and "听记" in all_texts(uidump(adb))
-    result("冷重启稳定性", restart_ok, "见报告末尾日志" if crashed else "")
-    if crashed:
-        log(crash_log[-2000:])
+    result("冷重启稳定性", restart_ok, "见 callnote_crash_log.txt" if crashed else "")
 
     screenshot(adb, os.path.join(here, "shot_5_restart.png"))
     finish(here, True)

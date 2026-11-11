@@ -1,0 +1,32 @@
+========================================================
+CallNote（听记）真机自动化测试  2026-11-11 17:13:33
+========================================================
+[PASS] 设备连接 —— PLR110（Android 16, 3B65BQ018Y700000）
+[PASS] 安装 APK —— Success
+[PASS] 版本确认 —— versionName=1.0.0
+[PASS] 冷启动无崩溃
+[PASS] 首页渲染（标题/统计/快捷操作）
+[FAIL] 无模型转写拦截提示 —— 预期 Snackbar：请先在「我的 → 语音转写引擎」下载并选择模型
+[FAIL] 录音页渲染（列表/搜索框）
+[FAIL] 分类页渲染（系统分类种子数据）
+[FAIL] 我的页渲染（引擎卡/功能规划）
+[PASS] Room 数据库落盘 —— callnote.db  callnote.db-shm  callnote.db-wal
+[FAIL] 冷重启稳定性 —— 见报告末尾日志
+ch(AndroidUiDispatcher.android.kt:41)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at androidx.compose.ui.platform.AndroidUiDispatcher$dispatchCallback$1.doFrame(AndroidUiDispatcher.android.kt:69)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1875)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:1886)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.view.Choreographer.doCallbacks(Choreographer.java:1398)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.view.Choreographer.doFrame(Choreographer.java:1246)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1860)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:1001)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:109)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:306)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:416)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:10001)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:613)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1074)
+11-11 17:13:49.383 18240 18240 E AndroidRuntime: 	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [androidx.compose.runtime.PausableMonotonicFrameClock@bd98a01, androidx.compose.ui.platform.MotionDurationScaleImpl@17240a6, StandaloneCoroutine{Cancelling}@3bc4ae7, AndroidUiDispatcher@ba87694]
+--------------------------------------------------------
+结论：5 项失败
