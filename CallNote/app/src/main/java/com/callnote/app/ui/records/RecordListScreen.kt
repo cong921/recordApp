@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.callnote.app.data.db.entity.CallCategoryEntity
@@ -59,11 +63,19 @@ fun RecordListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val exporting by viewModel.exporting.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 待归类的录音（点击列表项后弹底部选择器）
     var assignTarget by remember { mutableStateOf<RecordWithCategory?>(null) }
+
+    // 导出 TXT：SAF 新建文档选择器
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) viewModel.exportTo(uri)
+    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -95,6 +107,28 @@ fun RecordListScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            exportLauncher.launch(
+                                "听记导出_" +
+                                    java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) +
+                                    ".txt"
+                            )
+                        },
+                        enabled = !uiState.loading && uiState.records.isNotEmpty() && !exporting
+                    ) {
+                        if (exporting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Outlined.FileDownload, contentDescription = "导出 TXT")
+                        }
                     }
                 }
             )
